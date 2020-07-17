@@ -1,3 +1,5 @@
+from Compiler.Diagnostic import Diagnostic
+from Compiler.DiagnosticBag import DiagnosticBag
 from Compiler.Syntax.SyntaxKind import SyntaxKind
 from Compiler.Syntax.SyntaxTree import SyntaxTree
 from Compiler.Binding.BoundKind import BoundKind
@@ -12,7 +14,7 @@ from Compiler.Syntax.UnaryExpressionSyntax import UnaryExpressionSyntax
 
 class Binder:
     def __init__(self, syntax_tree=None):
-        self._diagnostics = []
+        self._diagnostics = DiagnosticBag()
         self._syntax_tree = syntax_tree
         self._syntax = None
 
@@ -48,8 +50,7 @@ class Binder:
         bound_operator_kind: BoundKind = self._bind_unary_operator_kind(syntax.get_operator_token().get_kind())
         result_type = BoundKind.resolve_unary_type(bound_operand.get_type(), bound_operator_kind)
         if result_type is None:
-            self._diagnostics.append(
-                f"Illegal unary operation({BoundKind.str(bound_operator_kind)}): <{Type.str(bound_operand.get_type())}>")
+            self._diagnostics.append(Diagnostic(syntax.get_operator_token().get_pos(), DiagnosticBag.Prefix.Error, DiagnosticBag.Message.operation_illegal_unary, BoundKind.str(bound_operator_kind), Type.str(bound_operand.get_type())))
         return BoundUnaryExpression(bound_operator_kind, bound_operand, result_type)
 
     def _bind_binary_expression(self, syntax: BinaryExpressionSyntax):
@@ -58,8 +59,7 @@ class Binder:
         bound_operator_kind = self._bind_binary_operator_kind(syntax.get_operator_token().get_kind())
         result_type = BoundKind.resolve_binary_type(bound_left.get_type(), bound_operator_kind, bound_right.get_type())
         if result_type is None:
-            self._diagnostics.append(
-                f"Illegal binary operation({BoundKind.str(bound_operator_kind)}): <{Type.str(bound_left.get_type())}> <{Type.str(bound_right.get_type())}>")
+            self._diagnostics.append(Diagnostic(syntax.get_operator_token().get_pos(), DiagnosticBag.Prefix.Error, DiagnosticBag.Message.operation_illegal_binary, BoundKind.str(bound_operator_kind), Type.str(bound_left.get_type()), Type.str(bound_right.get_type())))
         return BoundBinaryExpression(bound_left, bound_operator_kind, bound_right, result_type)
 
     @staticmethod

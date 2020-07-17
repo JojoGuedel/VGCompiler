@@ -1,12 +1,15 @@
+from Compiler.Diagnostic import Diagnostic
+from Compiler.DiagnosticBag import DiagnosticBag
 from Compiler.Syntax.SyntaxKind import SyntaxKind
 from Compiler.Syntax.SyntaxToken import SyntaxToken
+from Compiler.TetxtSpan import TextSpan
 
 
 class Lexer(SyntaxKind):
     def __init__(self, text=""):
         self._text = text
         self._pos = 0
-        self._diagnostics = []
+        self._diagnostics = DiagnosticBag()
 
     def set_text(self, text):
         self._text = text
@@ -39,7 +42,7 @@ class Lexer(SyntaxKind):
     def _next_token(self):
         # end of file
         if self._get_current_char() == '\0':
-            return SyntaxToken(SyntaxKind.end_of_file_token, '\0', self._pos)
+            return SyntaxToken(SyntaxKind.end_of_file_token, '\0', TextSpan(self._pos, self._pos))
         # int, float
         if self._is_number(self._get_current_char()):
             i_num = 0
@@ -60,40 +63,45 @@ class Lexer(SyntaxKind):
                     decimal_place *= 10
                     decimal_count += 1
                 f_num = round(f_num, decimal_count)
-                return SyntaxToken(SyntaxKind.float_token, f_num, start)
-            return SyntaxToken(SyntaxKind.int_token, i_num, start)
+                return SyntaxToken(SyntaxKind.float_token, f_num, TextSpan(start, self._pos))
+            return SyntaxToken(SyntaxKind.int_token, i_num, TextSpan(start, self._pos))
+        # keywords, identifier
+        if self._is_letter(self._get_current_char()):
+            start = self._pos
+            while self._is_letter(self._get_current_char()) or self._is_number(self._get_current_char()):
+                self._next()
+            text = self._text[start:self._pos]
+            kind = SyntaxKind.get_keyword_kind(text)
+            return SyntaxToken(kind, text, TextSpan(start, self._pos))
         # char
         if self._get_current_char() == '\'':
             start = self._next()
             while self._get_current_char() != '\'':
                 self._next()
                 if self._get_current_char() == "\0":
-                    self._diagnostics.append("ERROR: Character not closed")
+                    self._diagnostics.append(Diagnostic(TextSpan(start, self._pos), DiagnosticBag.Prefix.Error,
+                                                        DiagnosticBag.Message.char_literal_not_closed, line=self._text))
                     break
             value = self._text[start + 1:self._next()]
             if len(value) == 0:
-                self._diagnostics.append("ERROR: Empty character")
+                self._diagnostics.append(
+                    Diagnostic(TextSpan(start, self._pos), DiagnosticBag.Prefix.Error, DiagnosticBag.Message.char_empty,
+                               line=self._text))
             if len(value) > 1:
-                self._diagnostics.append("ERROR: Invalid character size")
-            return SyntaxToken(SyntaxKind.char_token, value, start)
-        # keywords, identifier
-        if self._is_letter(self._get_current_char()):
-            start = self._pos
-            while self._is_letter(self._get_current_char()) or self._is_number(self._get_current_char()):
-                self._next()
-            text = self._text[start:self._pos]
-            kind = SyntaxKind.get_keyword_kind(text)
-            return SyntaxToken(kind, text, start)
+                self._diagnostics.append(Diagnostic(TextSpan(start, self._pos), DiagnosticBag.Prefix.Error,
+                                                    DiagnosticBag.Message.char_invalid_size, line=self._text))
+            return SyntaxToken(SyntaxKind.char_token, value, TextSpan(start, self._pos))
         # string
         if self._get_current_char() == '"':
             start = self._next()
             while self._get_current_char() != '"':
                 self._next()
                 if self._get_current_char() == "\0":
-                    self._diagnostics.append(f"ERROR: String not closed")
+                    self._diagnostics.append(Diagnostic(TextSpan(start, self._pos), DiagnosticBag.Prefix.Error,
+                                                        DiagnosticBag.Message.str_literal_not_closed, line=self._text))
                     break
             value = self._text[start + 1:self._next()]
-            return SyntaxToken(SyntaxKind.string_token, value, start)
+            return SyntaxToken(SyntaxKind.string_token, value, TextSpan(start, self._pos))
         # keywords, identifier
         if self._is_letter(self._get_current_char()):
             start = self._pos
@@ -101,29 +109,29 @@ class Lexer(SyntaxKind):
                 self._next()
             text = self._text[start:self._pos]
             kind = SyntaxKind.get_keyword_kind(text)
-            return SyntaxToken(kind, text, start)
+            return SyntaxToken(kind, text, TextSpan(start, self._pos))
         # plus
         if self._get_current_char() == '+':
-            return SyntaxToken(SyntaxKind.plus_token, '+', self._next())
+            return SyntaxToken(SyntaxKind.plus_token, '+', TextSpan(self._pos, self._next()))
         # minus
         if self._get_current_char() == '-':
-            return SyntaxToken(SyntaxKind.minus_token, '-', self._next())
+            return SyntaxToken(SyntaxKind.minus_token, '-', TextSpan(self._pos, self._next()))
         # star, double star
         if self._get_current_char() == '*':
             if self._peek(1) == '*':
-                return SyntaxToken(SyntaxKind.double_star_token, "**", self._next(2))
-            return SyntaxToken(SyntaxKind.star_token, '*', self._next())
+                return SyntaxToken(SyntaxKind.double_star_token, "**", TextSpan(self._pos, self._next(2)))
+            return SyntaxToken(SyntaxKind.star_token, '*', TextSpan(self._pos, self._next()))
         # slash, double slash
         if self._get_current_char() == '/':
             if self._peek(1) == '/':
-                return SyntaxToken(SyntaxKind.double_slash_token, "//", self._next(2))
-            return SyntaxToken(SyntaxKind.slash_token, '/', self._next())
+                return SyntaxToken(SyntaxKind.double_slash_token, "//", TextSpan(self._pos, self._next(2)))
+            return SyntaxToken(SyntaxKind.slash_token, '/', TextSpan(self._pos, self._next()))
         # open parenthesis
         if self._get_current_char() == '(':
-            return SyntaxToken(SyntaxKind.open_parenthesis_token, '(', self._next())
+            return SyntaxToken(SyntaxKind.open_parenthesis_token, '(', TextSpan(self._pos, self._next()))
         # close parenthesis
         if self._get_current_char() == ')':
-            return SyntaxToken(SyntaxKind.close_parenthesis_token, ')', self._next())
+            return SyntaxToken(SyntaxKind.close_parenthesis_token, ')', TextSpan(self._pos, self._next()))
         # whitespace
         if self._get_current_char() == ' ':
             value = ""
@@ -131,43 +139,46 @@ class Lexer(SyntaxKind):
             while self._get_current_char() == ' ':
                 value += self._get_current_char()
                 self._next()
-            return SyntaxToken(SyntaxKind.white_space_token, value, start)
+            return SyntaxToken(SyntaxKind.white_space_token, value, TextSpan(start, self._pos))
         # bang_token
         if self._get_current_char() == '!':
-            return SyntaxToken(SyntaxKind.bang_token, self._get_current_char(), self._next())
+            return SyntaxToken(SyntaxKind.bang_token, self._get_current_char(), TextSpan(self._pos, self._next()))
         # double_ampersand_token
         if self._get_current_char() == '&':
             if self._peek(1) == '&':
-                return SyntaxToken(SyntaxKind.double_ampersand_token, "&&", self._next(2))
+                return SyntaxToken(SyntaxKind.double_ampersand_token, "&&", TextSpan(self._pos, self._next(2)))
         # double_pipe_token
         if self._get_current_char() == '|':
             if self._peek(1) == '|':
-                return SyntaxToken(SyntaxKind.double_pipe_token, "||", self._next(2))
+                return SyntaxToken(SyntaxKind.double_pipe_token, "||", TextSpan(self._pos, self._next(2)))
         # double_equals_token
         if self._get_current_char() == '=':
             if self._peek(1) == '=':
-                return SyntaxToken(SyntaxKind.double_equals_token, "==", self._next(2))
+                return SyntaxToken(SyntaxKind.double_equals_token, "==", TextSpan(self._pos, self._next(2)))
         # double_equals_token
         if self._get_current_char() == '<':
             if self._peek(1) == '=':
-                return SyntaxToken(SyntaxKind.double_equals_token, "<=", self._next(2))
+                return SyntaxToken(SyntaxKind.double_equals_token, "<=", TextSpan(self._pos, self._next(2)))
         # double_equals_token
         if self._get_current_char() == '>':
             if self._peek(1) == '=':
-                return SyntaxToken(SyntaxKind.double_equals_token, ">=", self._next(2))
+                return SyntaxToken(SyntaxKind.double_equals_token, ">=", TextSpan(self._pos, self._next(2)))
         # less_than
         if self._get_current_char() == '<':
-            return SyntaxToken(SyntaxKind.less_than_token, self._get_current_char(), self._next())
+            return SyntaxToken(SyntaxKind.less_than_token, self._get_current_char(), TextSpan(self._pos, self._next()))
         # greater_than
         if self._get_current_char() == '>':
-            return SyntaxToken(SyntaxKind.greater_than_token, self._get_current_char(), self._next())
+            return SyntaxToken(SyntaxKind.greater_than_token, self._get_current_char(),
+                               TextSpan(self._pos, self._next()))
         # invalid_char
-        self._diagnostics.append(f"ERROR: Invalid character input '{self._get_current_char()}'")
-        return SyntaxToken(SyntaxKind.invalid_char_token, self._get_current_char(), self._next())
+        self._diagnostics.append(Diagnostic(TextSpan(self._pos, self._pos), DiagnosticBag.Prefix.Error,
+                                            DiagnosticBag.Message.char_invalid_input, self._get_current_char(),
+                                            line=self._text))
+        return SyntaxToken(SyntaxKind.invalid_char_token, self._get_current_char(), TextSpan(self._pos, self._next()))
 
     def label(self, include_whitespace=True):
         self._pos = 0
-        self._diagnostics = []
+        self._diagnostics.clear()
 
         token_list = []
 
@@ -176,7 +187,7 @@ class Lexer(SyntaxKind):
             if not include_whitespace and current.get_kind() == SyntaxKind.white_space_token:
                 current = self._next_token
             token_list.append(current)
-        token_list.append(SyntaxToken(SyntaxKind.end_of_file_token, '\0', self._pos))
+        token_list.append(SyntaxToken(SyntaxKind.end_of_file_token, '\0', TextSpan(self._pos, self._pos)))
         return token_list
 
     def get_diagnostics(self):

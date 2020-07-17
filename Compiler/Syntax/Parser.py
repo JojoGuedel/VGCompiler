@@ -1,3 +1,5 @@
+from Compiler.Diagnostic import Diagnostic
+from Compiler.DiagnosticBag import DiagnosticBag
 from Compiler.Syntax.UnaryExpressionSyntax import UnaryExpressionSyntax
 from Compiler.Syntax.BinaryExpressionSyntax import BinaryExpressionSyntax
 from Compiler.Syntax.LiteralExpressionSyntax import LiteralExpressionSyntax
@@ -6,13 +8,14 @@ from Compiler.Syntax.SyntaxKind import SyntaxKind
 from Compiler.Syntax.SyntaxToken import SyntaxToken
 from Compiler.Syntax.SyntaxTree import SyntaxTree
 from Compiler.Syntax.Lexer import Lexer
+from Compiler.TetxtSpan import TextSpan
 
 
 class Parser(SyntaxKind):
     def __init__(self, text=""):
         self._text = text
         self._tokens = []
-        self._diagnostics = []
+        self._diagnostics = DiagnosticBag()
         self._pos = 0
 
     def set_text(self, text):
@@ -34,9 +37,7 @@ class Parser(SyntaxKind):
             error_text += SyntaxKind.str(i) + "/"
             if self._get_current_token().get_kind() == i:
                 return self._get_current_token()
-        self._diagnostics.append(
-            f"ERROR: Unexpected token kind <{SyntaxKind.str(self._get_current_token().get_kind())}> expected <" +
-            error_text[0:-1] + ">")
+        self._diagnostics.append(Diagnostic(self._get_current_token().get_pos(), DiagnosticBag.Prefix.Error, DiagnosticBag.Message.token_unexpected_kind, SyntaxKind.str(self._get_current_token().get_kind()), error_text[0:-1], line=self._text))
         return SyntaxToken(list_kind[0], 0, self._get_current_token().get_pos())
 
     def _next_token(self):
@@ -53,7 +54,9 @@ class Parser(SyntaxKind):
         self._tokens = lexer.label(include_whitespace=False)
         self._diagnostics = lexer.get_diagnostics()
 
-        return SyntaxTree(self._parse_expression(), self._diagnostics)
+        syntax_expression = SyntaxTree(self._parse_expression(), self._diagnostics)
+        self._match_token([SyntaxKind.end_of_file_token])
+        return syntax_expression
 
     def _parse_expression(self, parent_precedence=0):
         unary_operator_precedence = SyntaxKind.get_unary_operator_precedence(self._get_current_token().get_kind())

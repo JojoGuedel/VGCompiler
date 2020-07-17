@@ -1,5 +1,7 @@
+from Compiler.Binding.Binder import Binder
 from Compiler.Binding.BoundExpression import BoundExpression
 from Compiler.Binding.BoundKind import BoundKind
+from Compiler.Syntax.SyntaxTree import SyntaxTree
 
 
 class Evaluator:
@@ -12,7 +14,7 @@ class Evaluator:
     def evaluate(self):
         return self.evaluate_expression(self._root)
 
-    def evaluate_expression(self, root):        # BoundExpression
+    def evaluate_expression(self, root):  # BoundExpression
         if root.get_kind() == BoundKind.literal_expression:
             return root.get_value()
         elif root.get_kind() == BoundKind.unary_expression:

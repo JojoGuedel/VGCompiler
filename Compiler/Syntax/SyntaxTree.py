@@ -16,7 +16,9 @@ class SyntaxTree:
         return self._diagnostics
 
     def print(self):
+        print(colorama.Fore.WHITE, end='')
         self._print(self._expression)
+        print(colorama.Fore.RESET, end='')
 
     def _print(self, node, indent="", is_last=True):
         if is_last:
