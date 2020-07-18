@@ -20,6 +20,9 @@ class Lexer(SyntaxKind):
     def set_text(self, text):
         self._text = text
 
+    def get_diagnostics(self):
+        return self._diagnostics
+
     def _next(self, offset=1):
         self._pos += offset
         return self._pos - offset
@@ -43,6 +46,21 @@ class Lexer(SyntaxKind):
         if text in "abcdefghijklmnopqrstuvxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_":
             return True
         return False
+
+    def label(self, include_whitespace=True):
+        self._pos = 0
+        self._diagnostics.clear()
+
+        token_list = []
+
+        while self._get_current_char() != '\0':
+            current = self._next_token
+            if not include_whitespace and current.get_kind() == SyntaxKind.white_space_token:
+                current = self._next_token
+            token_list.append(current)
+        token_list.append(
+            SyntaxToken(SyntaxKind.end_of_file_token, '\0', TextSpan(self._pos, self._pos, line=self._text)))
+        return token_list
 
     @property
     def _next_token(self):
@@ -115,6 +133,9 @@ class Lexer(SyntaxKind):
             self._value = '\0'
             self._text_span = TextSpan(self._start, self._pos)
 
+        else:
+            self._next()
+
         return SyntaxToken(self._kind, self._value, TextSpan(self._text_span.get_start(), self._text_span.get_end(), self._text))
 
     def _label_number(self):
@@ -138,14 +159,14 @@ class Lexer(SyntaxKind):
         else:
             self._kind = SyntaxKind.int_token
             self._value = int(value)
-            self._text_span= TextSpan(self._start, self._pos)
+            self._text_span = TextSpan(self._start, self._pos)
 
     def _label_identifier(self):
         while self._is_letter(self._get_current_char()) or self._is_number(self._get_current_char()):
             self._next()
 
-        self._kind = SyntaxKind.get_keyword_kind(self._value)
         self._value = self._text[self._start:self._pos]
+        self._kind = SyntaxKind.get_keyword_kind(self._value)
         self._text_span = TextSpan(self._start, self._pos)
 
     def _label_char(self):
@@ -154,18 +175,20 @@ class Lexer(SyntaxKind):
         while self._get_current_char() != '\'' and self._get_current_char() != "\0":
             self._next()
 
+        self._kind = SyntaxKind.char_token
+        self._value = self._text[self._start + 1: self._pos]
+        self._text_span = TextSpan(self._start + 1, self._pos)
+
         if self._get_current_char() == "\0":
             self._report_error(DiagnosticBag.Message.char_literal_not_closed)
 
-        if self._start - self._pos == 0:
+        self._next()
+
+        if len(self._value) == 0:
             self._report_error(DiagnosticBag.Message.char_empty)
 
-        if self._start - self._pos > 1:
+        if len(self._value) > 1:
             self._report_error(DiagnosticBag.Message.char_invalid_size)
-
-        self._kind = SyntaxKind.char_token
-        self._value = self._text[self._start + 1: self._next()]
-        self._text_span = TextSpan(self._start + 1, self._pos - 1)
 
     def _label_string(self):
         self._next()
@@ -177,7 +200,7 @@ class Lexer(SyntaxKind):
             self._report_error(DiagnosticBag.Message.char_literal_not_closed)
 
         self._kind = SyntaxKind.string_token
-        self._value = self._text[self._start + 1: self._pos - 1]
+        self._value = self._text[self._start + 1: self._pos]
         self._text_span = TextSpan(self._start + 1, self._next())
 
     def _label_whitespace(self):
@@ -219,21 +242,3 @@ class Lexer(SyntaxKind):
             self._diagnostics.append(
                 Diagnostic(TextSpan(self._start, self._pos, line=self._text), DiagnosticBag.Prefix.Error,
                            error_message))
-
-    def label(self, include_whitespace=True):
-        self._pos = 0
-        self._diagnostics.clear()
-
-        token_list = []
-
-        while self._get_current_char() != '\0':
-            current = self._next_token
-            if not include_whitespace and current.get_kind() == SyntaxKind.white_space_token:
-                current = self._next_token
-            token_list.append(current)
-        token_list.append(
-            SyntaxToken(SyntaxKind.end_of_file_token, '\0', TextSpan(self._pos, self._pos, line=self._text)))
-        return token_list
-
-    def get_diagnostics(self):
-        return self._diagnostics

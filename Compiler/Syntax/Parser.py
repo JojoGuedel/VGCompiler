@@ -53,6 +53,7 @@ class Parser(SyntaxKind):
         lexer = Lexer(self._text)
         self._pos = 0
         self._tokens = lexer.label(include_whitespace=False)
+        print(self._tokens)
         self._diagnostics = lexer.get_diagnostics()
 
         syntax_expression = SyntaxTree(self._parse_expression(), self._diagnostics)
