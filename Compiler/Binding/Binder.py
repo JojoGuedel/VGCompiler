@@ -1,26 +1,34 @@
+from Compiler.Binding.BoundAssignmentExpression import BoundAssignmentExpression
+from Compiler.Binding.BoundVariableExpression import BoundVariableExpression
+from Compiler.Type import Type
 from Compiler.Diagnostic import Diagnostic
 from Compiler.DiagnosticBag import DiagnosticBag
-from Compiler.Syntax.SyntaxKind import SyntaxKind
-from Compiler.Syntax.SyntaxTree import SyntaxTree
 from Compiler.Binding.BoundKind import BoundKind
-from Compiler.Binding.BoundBinaryExpression import BoundBinaryExpression
-from Compiler.Binding.BoundLiteralExpression import BoundLiteralExpression
+from Compiler.Syntax.SyntaxTree import SyntaxTree
+from Compiler.Syntax.SyntaxKind import SyntaxKind
 from Compiler.Binding.BoundUnaryExpression import BoundUnaryExpression
-from Compiler.Syntax.BinaryExpressionSyntax import BinaryExpressionSyntax
-from Compiler.Syntax.LiteralExpressionSyntax import LiteralExpressionSyntax
-from Compiler.Syntax.Type import Type
 from Compiler.Syntax.UnaryExpressionSyntax import UnaryExpressionSyntax
+from Compiler.Binding.BoundBinaryExpression import BoundBinaryExpression
+from Compiler.Syntax.BinaryExpressionSyntax import BinaryExpressionSyntax
+from Compiler.Binding.BoundLiteralExpression import BoundLiteralExpression
+from Compiler.Syntax.AssignmentExpression import AssignmentExpressionSyntax
+from Compiler.Syntax.LiteralExpressionSyntax import LiteralExpressionSyntax
+from Compiler.Syntax.VariableExpressionSyntax import VariableExpressionSyntax
 
 
 class Binder:
-    def __init__(self, syntax_tree=None):
+    def __init__(self):
+        self._variables = None
+        self._syntax_tree = None
         self._diagnostics = DiagnosticBag()
-        self._syntax_tree = syntax_tree
         self._syntax = None
 
     def set_syntax_tree(self, syntax_tree: SyntaxTree):
         self._syntax_tree = syntax_tree
         self._syntax = syntax_tree.get_expression()
+
+    def set_variable(self, variables):
+        self._variables = variables
 
     def get_diagnostics(self):
         return self._diagnostics
@@ -38,19 +46,26 @@ class Binder:
             return self._bind_binary_expression(syntax)
         elif syntax.get_kind() == SyntaxKind.parenthesized_expression:
             return self._bind_expression(syntax.get_expression())
+        elif syntax.get_kind() == SyntaxKind.variable_expression:
+            return self._bind_variable_expression(syntax)
+        elif syntax.get_kind() == SyntaxKind.assignment_expression:
+            return self._bind_assignment_expression(syntax)
         else:
             raise Exception(f"Unexpected syntax: '{SyntaxKind.str(self._syntax.get_kind())}'")
 
     @staticmethod
     def _bind_literal_expression(syntax: LiteralExpressionSyntax):
-        return BoundLiteralExpression(Type.get_type(syntax.get_literal_token().get_kind()), syntax.get_literal_token().get_value())
+        return BoundLiteralExpression(Type.get_type(syntax.get_literal_token().get_kind()),
+                                      syntax.get_literal_token().get_value())
 
     def _bind_unary_expression(self, syntax: UnaryExpressionSyntax):
         bound_operand = self._bind_expression(syntax.get_operand())  # BoundExpression
         bound_operator_kind: BoundKind = self._bind_unary_operator_kind(syntax.get_operator_token().get_kind())
         result_type = BoundKind.resolve_unary_type(bound_operand.get_type(), bound_operator_kind)
         if result_type is None:
-            self._diagnostics.append(Diagnostic(syntax.get_operator_token().get_pos(), DiagnosticBag.Prefix.Error, DiagnosticBag.Message.operation_illegal_unary, BoundKind.str(bound_operator_kind), Type.str(bound_operand.get_type())))
+            self._diagnostics.append(Diagnostic(syntax.get_operator_token().get_pos(), DiagnosticBag.Prefix.Error,
+                                                DiagnosticBag.Message.operation_illegal_unary,
+                                                BoundKind.str(bound_operator_kind), Type.str(bound_operand.get_type())))
         return BoundUnaryExpression(bound_operator_kind, bound_operand, result_type)
 
     def _bind_binary_expression(self, syntax: BinaryExpressionSyntax):
@@ -59,8 +74,39 @@ class Binder:
         bound_operator_kind = self._bind_binary_operator_kind(syntax.get_operator_token().get_kind())
         result_type = BoundKind.resolve_binary_type(bound_left.get_type(), bound_operator_kind, bound_right.get_type())
         if result_type is None:
-            self._diagnostics.append(Diagnostic(syntax.get_operator_token().get_pos(), DiagnosticBag.Prefix.Error, DiagnosticBag.Message.operation_illegal_binary, BoundKind.str(bound_operator_kind), Type.str(bound_left.get_type()), Type.str(bound_right.get_type())))
+            self._diagnostics.append(Diagnostic(syntax.get_operator_token().get_pos(), DiagnosticBag.Prefix.Error,
+                                                DiagnosticBag.Message.operation_illegal_binary,
+                                                BoundKind.str(bound_operator_kind), Type.str(bound_left.get_type()),
+                                                Type.str(bound_right.get_type())))
         return BoundBinaryExpression(bound_left, bound_operator_kind, bound_right, result_type)
+
+    def _bind_variable_expression(self, syntax: VariableExpressionSyntax):
+        name = syntax.get_identifier_token().get_value()
+
+        if not name in self._variables:
+            self._diagnostics.append(
+                Diagnostic(syntax.get_identifier_token().get_pos(), DiagnosticBag.Prefix.Error, DiagnosticBag.Message.variable_not_defined, name))
+            return BoundLiteralExpression(Type.none_type, 0)
+
+        variable_type = Type.none_type
+        if isinstance(self._variables[name], int):
+            variable_type = Type.int_type
+        elif isinstance(self._variables[name], float):
+            variable_type = Type.float_type
+        elif isinstance(self._variables[name], str):
+            variable_type = Type.string_type
+            if len(self._variables[name]) == 1:
+                variable_type = Type.char_type
+        elif isinstance(self._variables[name], bool):
+            variable_type = Type.boolean_type
+        elif self._variables[name] is None:
+            variable_type = Type.any_type
+        return BoundVariableExpression(name, variable_type)
+
+    def _bind_assignment_expression(self, syntax: AssignmentExpressionSyntax):
+        variable_name = syntax.get_identifier_token().get_value()
+        expression = self._bind_expression(syntax.get_expression())
+        return BoundAssignmentExpression(variable_name, expression)
 
     @staticmethod
     def _bind_unary_operator_kind(kind):

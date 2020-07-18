@@ -1,5 +1,6 @@
 from Compiler.Diagnostic import Diagnostic
 from Compiler.DiagnosticBag import DiagnosticBag
+from Compiler.Syntax.AssignmentExpression import AssignmentExpressionSyntax
 from Compiler.Syntax.UnaryExpressionSyntax import UnaryExpressionSyntax
 from Compiler.Syntax.BinaryExpressionSyntax import BinaryExpressionSyntax
 from Compiler.Syntax.LiteralExpressionSyntax import LiteralExpressionSyntax
@@ -8,7 +9,7 @@ from Compiler.Syntax.SyntaxKind import SyntaxKind
 from Compiler.Syntax.SyntaxToken import SyntaxToken
 from Compiler.Syntax.SyntaxTree import SyntaxTree
 from Compiler.Syntax.Lexer import Lexer
-from Compiler.TetxtSpan import TextSpan
+from Compiler.Syntax.VariableExpressionSyntax import VariableExpressionSyntax
 
 
 class Parser(SyntaxKind):
@@ -37,7 +38,10 @@ class Parser(SyntaxKind):
             error_text += SyntaxKind.str(i) + "/"
             if self._get_current_token().get_kind() == i:
                 return self._get_current_token()
-        self._diagnostics.append(Diagnostic(self._get_current_token().get_pos(), DiagnosticBag.Prefix.Error, DiagnosticBag.Message.token_unexpected_kind, SyntaxKind.str(self._get_current_token().get_kind()), error_text[0:-1], line=self._text))
+        self._diagnostics.append(Diagnostic(self._get_current_token().get_pos(), DiagnosticBag.Prefix.Error,
+                                            DiagnosticBag.Message.token_unexpected_kind,
+                                            SyntaxKind.str(self._get_current_token().get_kind()), error_text[0:-1],
+                                            line=self._text))
         return SyntaxToken(list_kind[0], 0, self._get_current_token().get_pos())
 
     def _next_token(self):
@@ -93,8 +97,19 @@ class Parser(SyntaxKind):
             value = self._get_current_token().get_kind() == SyntaxKind.true_keyword
             self._get_current_token()._value = value
             return LiteralExpressionSyntax(self._next_token())
+        elif self._get_current_token().get_kind() == SyntaxKind.identifier_token:
+            identifier = self._get_current_token()
+            self._next_token()
+            if self._get_current_token().get_kind() == SyntaxKind.equals_token:
+                equals_token = self._get_current_token()
+                self._next_token()
+                value = self._parse_expression()
+                return AssignmentExpressionSyntax(identifier, equals_token, value)
+            else:
+                return VariableExpressionSyntax(identifier)
 
         # parse numbers
-        literal_token = self._match_token([SyntaxKind.int_token, SyntaxKind.float_token, SyntaxKind.string_token, SyntaxKind.char_token])
+        literal_token = self._match_token(
+            [SyntaxKind.int_token, SyntaxKind.float_token, SyntaxKind.string_token, SyntaxKind.char_token])
         self._pos += 1
         return LiteralExpressionSyntax(literal_token)

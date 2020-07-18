@@ -146,23 +146,23 @@ class Lexer(SyntaxKind):
         # double_ampersand_token
         if self._get_current_char() == '&':
             if self._peek(1) == '&':
-                return SyntaxToken(SyntaxKind.double_ampersand_token, "&&", TextSpan(self._pos, self._next(2)))
+                return SyntaxToken(SyntaxKind.double_ampersand_token, "&&", TextSpan(self._pos, self._next(2) + 1))
         # double_pipe_token
         if self._get_current_char() == '|':
             if self._peek(1) == '|':
-                return SyntaxToken(SyntaxKind.double_pipe_token, "||", TextSpan(self._pos, self._next(2)))
+                return SyntaxToken(SyntaxKind.double_pipe_token, "||", TextSpan(self._pos, self._next(2) + 1))
         # double_equals_token
         if self._get_current_char() == '=':
             if self._peek(1) == '=':
-                return SyntaxToken(SyntaxKind.double_equals_token, "==", TextSpan(self._pos, self._next(2)))
+                return SyntaxToken(SyntaxKind.double_equals_token, "==", TextSpan(self._pos, self._next(2) + 1))
         # double_equals_token
         if self._get_current_char() == '<':
             if self._peek(1) == '=':
-                return SyntaxToken(SyntaxKind.double_equals_token, "<=", TextSpan(self._pos, self._next(2)))
+                return SyntaxToken(SyntaxKind.double_equals_token, "<=", TextSpan(self._pos, self._next(2) + 1))
         # double_equals_token
         if self._get_current_char() == '>':
             if self._peek(1) == '=':
-                return SyntaxToken(SyntaxKind.double_equals_token, ">=", TextSpan(self._pos, self._next(2)))
+                return SyntaxToken(SyntaxKind.double_equals_token, ">=", TextSpan(self._pos, self._next(2) + 1))
         # less_than
         if self._get_current_char() == '<':
             return SyntaxToken(SyntaxKind.less_than_token, self._get_current_char(), TextSpan(self._pos, self._next()))
@@ -170,6 +170,9 @@ class Lexer(SyntaxKind):
         if self._get_current_char() == '>':
             return SyntaxToken(SyntaxKind.greater_than_token, self._get_current_char(),
                                TextSpan(self._pos, self._next()))
+        # equals_token
+        if self._get_current_char() == '=':
+            return SyntaxToken(SyntaxKind.equals_token, self._get_current_char(), TextSpan(self._pos, self._next()))
         # invalid_char
         self._diagnostics.append(Diagnostic(TextSpan(self._pos, self._pos), DiagnosticBag.Prefix.Error,
                                             DiagnosticBag.Message.char_invalid_input, self._get_current_char(),

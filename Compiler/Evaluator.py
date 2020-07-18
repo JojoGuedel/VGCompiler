@@ -1,15 +1,17 @@
-from Compiler.Binding.Binder import Binder
 from Compiler.Binding.BoundExpression import BoundExpression
 from Compiler.Binding.BoundKind import BoundKind
-from Compiler.Syntax.SyntaxTree import SyntaxTree
 
 
 class Evaluator:
-    def __init__(self, root=None):
-        self._root: BoundExpression = root
+    def __init__(self):
+        self._root = None
+        self._variables = None
 
     def set_root(self, root: BoundExpression):
         self._root = root
+
+    def set_variables(self, variables):
+        self._variables = variables
 
     def evaluate(self):
         return self.evaluate_expression(self._root)
@@ -62,5 +64,11 @@ class Evaluator:
                 return left > right
             else:
                 raise Exception(f"Unexpected binary operator: '{BoundKind.str(root.get_operator_kind())}'")
+        elif root.get_kind() == BoundKind.variable_expression:
+            return self._variables[root.get_variable_name()]
+        elif root.get_kind() == BoundKind.variable_assignment_expression:
+            value = self.evaluate_expression(root.get_expression())
+            self._variables[root.get_variable_name()] = value
+            return value
         else:
-            raise Exception(f"Evaluator fail '")
+            raise Exception(f"Evaluator fail: '{BoundKind.str(root.get_kind())}'")

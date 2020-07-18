@@ -16,6 +16,7 @@ parser = Parser()
 lexer = Lexer()
 evaluator = Evaluator()
 binder = Binder()
+variables = {}
 
 # def on_press(key):
 #    if key == keyboard.Key.esc:
@@ -39,7 +40,7 @@ while run:
     syntax_tree = parser.parse()
 
     compilation.set_syntax_tree(syntax_tree)
-    result = compilation.evaluate()
+    result = compilation.evaluate(variables)
 
     if not result.get_diagnostics().get_diagnostic():
         print(result.get_value())

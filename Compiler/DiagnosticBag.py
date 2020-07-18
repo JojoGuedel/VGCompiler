@@ -28,20 +28,21 @@ class DiagnosticBag:
                 self._print_fast(i.get_span(), i.get_prefix(), i.get_message(), i.get_args())
 
     def _print_fast(self, span, prefix, message, args):
-        position = f"{span.get_start()}:{span.get_end()}"
+        position = f"{span.get_start()}"
+        if span.get_start() != span.get_end():
+            position = f"{span.get_start()}:{span.get_end()}"
         prefix = self._format(prefix, [position])
         message = self._format(message, args)
         diagnostic_message = f"{prefix}{message}{colorama.Fore.RESET}"
         print(diagnostic_message)
 
     def _print(self, span, prefix, message, args, line):
-        position = f"{span.get_start()}:{span.get_end()}"
-        prefix = self._format(prefix, [position])
-        message = self._format(message, args)
-        diagnostic_message = f"{prefix}{message}{colorama.Fore.RESET}"
-        print(diagnostic_message)
+        self._print_fast(span, prefix, message, args)
         print(colorama.Fore.RED + "└──" + "ErrorLine: " + line)
-        print("              " + " " * span.get_start() + "^" + colorama.Fore.RESET)
+        if span.get_length() == 0:
+            print(" " * 14 + " " * span.get_start() + "^" + colorama.Fore.RESET)
+        else:
+            print(" " * 14 + " " * span.get_start() + "^" + "~" * (span.get_length() - 2) + "^" + colorama.Fore.RESET)
 
     @staticmethod
     def _format(text: str, args):
@@ -69,3 +70,5 @@ class DiagnosticBag:
 
         operation_illegal_unary = "Illegal unary operation '{}' for <{}>."
         operation_illegal_binary = "Illegal binary operation '{}' for <{}> and <{}>."
+
+        variable_not_defined = "Variable '{}' does not exist."

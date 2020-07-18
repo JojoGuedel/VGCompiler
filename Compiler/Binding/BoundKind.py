@@ -1,10 +1,12 @@
-from Compiler.Syntax.Type import Type
+from Compiler.Type import Type
 
 
 class BoundKind:
     unary_expression = 100
     literal_expression = 101
     binary_expression = 102
+    variable_expression = 103
+    variable_assignment_expression = 104
 
     identity = 200
     negation = 201
