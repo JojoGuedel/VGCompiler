@@ -23,7 +23,7 @@ class BinaryExpressionSyntax(ExpressionSyntax):
         return self._operator_token
 
     def get_right(self):
-        return self._right
+         return self._right
 
     def get_kind(self):
         return SyntaxKind.binary_expression

@@ -48,4 +48,4 @@ class Type:
         elif type == cls.boolean_type:
             return "boolean_type"
         else:
-            return "invalid type"
+            return f"not assigned type '{type}'"

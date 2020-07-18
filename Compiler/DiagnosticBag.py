@@ -22,10 +22,10 @@ class DiagnosticBag:
 
     def print(self):
         for i in self._diagnostic:
-            if i.get_line() != "":
-                self._print(i.get_span(), i.get_prefix(), i.get_message(), i.get_args(), i.get_line())
+            if i.get_span().get_line() != "":
+                self._print(i.get_span(), i.get_prefix(), i.get_message(), i.get_optional_arguments(), i.get_span().get_line())
             else:
-                self._print_fast(i.get_span(), i.get_prefix(), i.get_message(), i.get_args())
+                self._print_fast(i.get_span(), i.get_prefix(), i.get_message(), i.get_optional_arguments())
 
     def _print_fast(self, span, prefix, message, args):
         position = f"{span.get_start()}"
@@ -62,6 +62,7 @@ class DiagnosticBag:
 
         char_literal_not_closed = "Character literal not closed."
         char_empty = "Empty character."
+        char_not_expected = "Unexpected character '{}', expected '{}' "
         char_invalid_size = "Invalid character size."
 
         str_literal_not_closed = "String literal not closed."

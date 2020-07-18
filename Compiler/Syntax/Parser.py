@@ -38,10 +38,7 @@ class Parser(SyntaxKind):
             error_text += SyntaxKind.str(i) + "/"
             if self._get_current_token().get_kind() == i:
                 return self._get_current_token()
-        self._diagnostics.append(Diagnostic(self._get_current_token().get_pos(), DiagnosticBag.Prefix.Error,
-                                            DiagnosticBag.Message.token_unexpected_kind,
-                                            SyntaxKind.str(self._get_current_token().get_kind()), error_text[0:-1],
-                                            line=self._text))
+        self._diagnostics.append(Diagnostic(self._get_current_token().get_pos(), DiagnosticBag.Prefix.Error, DiagnosticBag.Message.token_unexpected_kind, [SyntaxKind.str(self._get_current_token().get_kind()), error_text[0:-1]]))
         return SyntaxToken(list_kind[0], 0, self._get_current_token().get_pos())
 
     def _next_token(self):

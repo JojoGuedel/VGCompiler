@@ -1,5 +1,3 @@
-from Compiler.Binding.BoundAssignmentExpression import BoundAssignmentExpression
-from Compiler.Binding.BoundVariableExpression import BoundVariableExpression
 from Compiler.Type import Type
 from Compiler.Diagnostic import Diagnostic
 from Compiler.DiagnosticBag import DiagnosticBag
@@ -13,7 +11,9 @@ from Compiler.Syntax.BinaryExpressionSyntax import BinaryExpressionSyntax
 from Compiler.Binding.BoundLiteralExpression import BoundLiteralExpression
 from Compiler.Syntax.AssignmentExpression import AssignmentExpressionSyntax
 from Compiler.Syntax.LiteralExpressionSyntax import LiteralExpressionSyntax
+from Compiler.Binding.BoundVariableExpression import BoundVariableExpression
 from Compiler.Syntax.VariableExpressionSyntax import VariableExpressionSyntax
+from Compiler.Binding.BoundAssignmentExpression import BoundAssignmentExpression
 
 
 class Binder:
@@ -65,7 +65,7 @@ class Binder:
         if result_type is None:
             self._diagnostics.append(Diagnostic(syntax.get_operator_token().get_pos(), DiagnosticBag.Prefix.Error,
                                                 DiagnosticBag.Message.operation_illegal_unary,
-                                                BoundKind.str(bound_operator_kind), Type.str(bound_operand.get_type())))
+                                                [BoundKind.str(bound_operator_kind), Type.str(bound_operand.get_type())]))
         return BoundUnaryExpression(bound_operator_kind, bound_operand, result_type)
 
     def _bind_binary_expression(self, syntax: BinaryExpressionSyntax):
@@ -76,8 +76,8 @@ class Binder:
         if result_type is None:
             self._diagnostics.append(Diagnostic(syntax.get_operator_token().get_pos(), DiagnosticBag.Prefix.Error,
                                                 DiagnosticBag.Message.operation_illegal_binary,
-                                                BoundKind.str(bound_operator_kind), Type.str(bound_left.get_type()),
-                                                Type.str(bound_right.get_type())))
+                                                [BoundKind.str(bound_operator_kind), Type.str(bound_left.get_type()),
+                                                Type.str(bound_right.get_type())]))
         return BoundBinaryExpression(bound_left, bound_operator_kind, bound_right, result_type)
 
     def _bind_variable_expression(self, syntax: VariableExpressionSyntax):
@@ -91,15 +91,15 @@ class Binder:
         variable_type = Type.none_type
         if isinstance(self._variables[name], int):
             variable_type = Type.int_type
-        elif isinstance(self._variables[name], float):
+        if isinstance(self._variables[name], float):
             variable_type = Type.float_type
-        elif isinstance(self._variables[name], str):
+        if isinstance(self._variables[name], str):
             variable_type = Type.string_type
             if len(self._variables[name]) == 1:
                 variable_type = Type.char_type
-        elif isinstance(self._variables[name], bool):
+        if isinstance(self._variables[name], bool):
             variable_type = Type.boolean_type
-        elif self._variables[name] is None:
+        if self._variables[name] is None:
             variable_type = Type.any_type
         return BoundVariableExpression(name, variable_type)
 

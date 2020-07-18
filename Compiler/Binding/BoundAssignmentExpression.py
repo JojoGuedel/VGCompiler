@@ -13,7 +13,7 @@ class BoundAssignmentExpression:
         return self._expression
 
     def get_type(self):
-        return self._expression.get_type
+        return self._expression.get_type()
 
     @staticmethod
     def get_kind():

@@ -7,9 +7,15 @@ from Compiler.TetxtSpan import TextSpan
 
 class Lexer(SyntaxKind):
     def __init__(self, text=""):
-        self._text = text
         self._pos = 0
+        self._text = text
         self._diagnostics = DiagnosticBag()
+
+        self._start = None
+        self._kind = None
+        self._value = None
+        self._text_span = None
+        self._error_message = ""
 
     def set_text(self, text):
         self._text = text
@@ -40,144 +46,179 @@ class Lexer(SyntaxKind):
 
     @property
     def _next_token(self):
-        # end of file
-        if self._get_current_char() == '\0':
-            return SyntaxToken(SyntaxKind.end_of_file_token, '\0', TextSpan(self._pos, self._pos))
-        # int, float
+        self._start = self._pos
+        self._value = None
+        self._kind = SyntaxKind.invalid_char_token
+        self._text_span = TextSpan(self._start, self._pos)
+
         if self._is_number(self._get_current_char()):
-            i_num = 0
-            start = self._pos
+            self._label_number()
+
+        elif self._is_letter(self._get_current_char()):
+            self._label_identifier()
+
+        elif self._get_current_char() == '\'':
+            self._label_char()
+
+        elif self._get_current_char() == '"':
+            self._label_string()
+
+        elif self._get_current_char() == ' ':
+            self._label_whitespace()
+
+        elif self._get_current_char() == '*':
+            self._label_double_token(['*', '='], [SyntaxKind.double_star_token, SyntaxKind.equals_token], SyntaxKind.star_token)
+
+        elif self._get_current_char() == '/':
+            self._label_double_token(['/'], [SyntaxKind.double_slash_token], SyntaxKind.slash_token)
+
+        elif self._get_current_char() == '!':
+            self._label_double_token(['='], [SyntaxKind.not_equals_token], SyntaxKind.bang_token)
+
+        elif self._get_current_char() == '=':
+            self._label_double_token(['='], [SyntaxKind.double_equals_token], SyntaxKind.equals_token)
+
+        elif self._get_current_char() == '<':
+            self._label_double_token(['='], [SyntaxKind.less_than_token], SyntaxKind.less_or_equals_token)
+
+        elif self._get_current_char() == '>':
+            self._label_double_token(['='], [SyntaxKind.greater_or_equals_token], SyntaxKind.greater_than_token)
+
+        elif self._get_current_char() == '&':
+            self._label_double_token(['&'], [SyntaxKind.double_ampersand_token])
+
+        elif self._get_current_char() == '|':
+            self._label_double_token(['|'], [SyntaxKind.double_pipe_token])
+
+        elif self._get_current_char() == '+':
+            self._kind = SyntaxKind.plus_token
+            self._value = '+'
+            self._text_span = TextSpan(self._start, self._next())
+
+        elif self._get_current_char() == '-':
+            self._kind = SyntaxKind.minus_token
+            self._value = '-'
+            self._text_span = TextSpan(self._start, self._next())
+
+        elif self._get_current_char() == '(':
+            self._kind = SyntaxKind.open_parenthesis_token
+            self._value = '('
+            self._text_span = TextSpan(self._start, self._next())
+
+        elif self._get_current_char() == ')':
+            self._kind = SyntaxKind.close_parenthesis_token
+            self._value = ')'
+            self._text_span = TextSpan(self._start, self._next())
+
+        elif self._get_current_char() == '\0':
+            self._kind = SyntaxKind.end_of_file_token
+            self._value = '\0'
+            self._text_span = TextSpan(self._start, self._pos)
+
+        return SyntaxToken(self._kind, self._value, TextSpan(self._text_span.get_start(), self._text_span.get_end(), self._text))
+
+    def _label_number(self):
+        value = 0.0
+        while self._is_number(self._get_current_char()):
+            value = value * 10 + int(self._get_current_char())
+            self._next()
+
+        if self._get_current_char() == '.':
+            decimal_place = 10.0
+            self._next()
 
             while self._is_number(self._get_current_char()):
-                i_num = int(i_num * 10 + int(self._get_current_char()))
+                value += float(self._get_current_char()) / decimal_place
+                decimal_place *= 10.0
                 self._next()
 
-            if self._get_current_char() == '.':
-                f_num = float(i_num)
-                self._next()
-                decimal_place = 10
-                decimal_count = 0
-                while self._is_number(self._get_current_char()):
-                    f_num += float(self._get_current_char()) / float(decimal_place)
-                    self._next()
-                    decimal_place *= 10
-                    decimal_count += 1
-                f_num = round(f_num, decimal_count)
-                return SyntaxToken(SyntaxKind.float_token, f_num, TextSpan(start, self._pos))
-            return SyntaxToken(SyntaxKind.int_token, i_num, TextSpan(start, self._pos))
-        # keywords, identifier
-        if self._is_letter(self._get_current_char()):
-            start = self._pos
-            while self._is_letter(self._get_current_char()) or self._is_number(self._get_current_char()):
-                self._next()
-            text = self._text[start:self._pos]
-            kind = SyntaxKind.get_keyword_kind(text)
-            return SyntaxToken(kind, text, TextSpan(start, self._pos))
-        # char
-        if self._get_current_char() == '\'':
-            start = self._next()
-            while self._get_current_char() != '\'':
-                self._next()
-                if self._get_current_char() == "\0":
-                    self._diagnostics.append(Diagnostic(TextSpan(start, self._pos), DiagnosticBag.Prefix.Error,
-                                                        DiagnosticBag.Message.char_literal_not_closed, line=self._text))
-                    break
-            value = self._text[start + 1:self._next()]
-            if len(value) == 0:
-                self._diagnostics.append(
-                    Diagnostic(TextSpan(start, self._pos), DiagnosticBag.Prefix.Error, DiagnosticBag.Message.char_empty,
-                               line=self._text))
-            if len(value) > 1:
-                self._diagnostics.append(Diagnostic(TextSpan(start, self._pos), DiagnosticBag.Prefix.Error,
-                                                    DiagnosticBag.Message.char_invalid_size, line=self._text))
-            return SyntaxToken(SyntaxKind.char_token, value, TextSpan(start, self._pos))
-        # string
-        if self._get_current_char() == '"':
-            start = self._next()
-            while self._get_current_char() != '"':
-                self._next()
-                if self._get_current_char() == "\0":
-                    self._diagnostics.append(Diagnostic(TextSpan(start, self._pos), DiagnosticBag.Prefix.Error,
-                                                        DiagnosticBag.Message.str_literal_not_closed, line=self._text))
-                    break
-            value = self._text[start + 1:self._next()]
-            return SyntaxToken(SyntaxKind.string_token, value, TextSpan(start, self._pos))
-        # keywords, identifier
-        if self._is_letter(self._get_current_char()):
-            start = self._pos
-            while self._is_letter(self._get_current_char()) or self._is_number(self._get_current_char()):
-                self._next()
-            text = self._text[start:self._pos]
-            kind = SyntaxKind.get_keyword_kind(text)
-            return SyntaxToken(kind, text, TextSpan(start, self._pos))
-        # plus
-        if self._get_current_char() == '+':
-            return SyntaxToken(SyntaxKind.plus_token, '+', TextSpan(self._pos, self._next()))
-        # minus
-        if self._get_current_char() == '-':
-            return SyntaxToken(SyntaxKind.minus_token, '-', TextSpan(self._pos, self._next()))
-        # star, double star
-        if self._get_current_char() == '*':
-            if self._peek(1) == '*':
-                return SyntaxToken(SyntaxKind.double_star_token, "**", TextSpan(self._pos, self._next(2)))
-            return SyntaxToken(SyntaxKind.star_token, '*', TextSpan(self._pos, self._next()))
-        # slash, double slash
-        if self._get_current_char() == '/':
-            if self._peek(1) == '/':
-                return SyntaxToken(SyntaxKind.double_slash_token, "//", TextSpan(self._pos, self._next(2)))
-            return SyntaxToken(SyntaxKind.slash_token, '/', TextSpan(self._pos, self._next()))
-        # open parenthesis
-        if self._get_current_char() == '(':
-            return SyntaxToken(SyntaxKind.open_parenthesis_token, '(', TextSpan(self._pos, self._next()))
-        # close parenthesis
-        if self._get_current_char() == ')':
-            return SyntaxToken(SyntaxKind.close_parenthesis_token, ')', TextSpan(self._pos, self._next()))
-        # whitespace
-        if self._get_current_char() == ' ':
-            value = ""
-            start = self._pos
-            while self._get_current_char() == ' ':
-                value += self._get_current_char()
-                self._next()
-            return SyntaxToken(SyntaxKind.white_space_token, value, TextSpan(start, self._pos))
-        # bang_token
-        if self._get_current_char() == '!':
-            return SyntaxToken(SyntaxKind.bang_token, self._get_current_char(), TextSpan(self._pos, self._next()))
-        # double_ampersand_token
-        if self._get_current_char() == '&':
-            if self._peek(1) == '&':
-                return SyntaxToken(SyntaxKind.double_ampersand_token, "&&", TextSpan(self._pos, self._next(2) + 1))
-        # double_pipe_token
-        if self._get_current_char() == '|':
-            if self._peek(1) == '|':
-                return SyntaxToken(SyntaxKind.double_pipe_token, "||", TextSpan(self._pos, self._next(2) + 1))
-        # double_equals_token
-        if self._get_current_char() == '=':
-            if self._peek(1) == '=':
-                return SyntaxToken(SyntaxKind.double_equals_token, "==", TextSpan(self._pos, self._next(2) + 1))
-        # double_equals_token
-        if self._get_current_char() == '<':
-            if self._peek(1) == '=':
-                return SyntaxToken(SyntaxKind.double_equals_token, "<=", TextSpan(self._pos, self._next(2) + 1))
-        # double_equals_token
-        if self._get_current_char() == '>':
-            if self._peek(1) == '=':
-                return SyntaxToken(SyntaxKind.double_equals_token, ">=", TextSpan(self._pos, self._next(2) + 1))
-        # less_than
-        if self._get_current_char() == '<':
-            return SyntaxToken(SyntaxKind.less_than_token, self._get_current_char(), TextSpan(self._pos, self._next()))
-        # greater_than
-        if self._get_current_char() == '>':
-            return SyntaxToken(SyntaxKind.greater_than_token, self._get_current_char(),
-                               TextSpan(self._pos, self._next()))
-        # equals_token
-        if self._get_current_char() == '=':
-            return SyntaxToken(SyntaxKind.equals_token, self._get_current_char(), TextSpan(self._pos, self._next()))
-        # invalid_char
-        self._diagnostics.append(Diagnostic(TextSpan(self._pos, self._pos), DiagnosticBag.Prefix.Error,
-                                            DiagnosticBag.Message.char_invalid_input, self._get_current_char(),
-                                            line=self._text))
-        return SyntaxToken(SyntaxKind.invalid_char_token, self._get_current_char(), TextSpan(self._pos, self._next()))
+            self._kind = SyntaxKind.float_token
+            self._value = value
+            self._text_span = TextSpan(self._start, self._pos)
+        else:
+            self._kind = SyntaxKind.int_token
+            self._value = int(value)
+            self._text_span= TextSpan(self._start, self._pos)
+
+    def _label_identifier(self):
+        while self._is_letter(self._get_current_char()) or self._is_number(self._get_current_char()):
+            self._next()
+
+        self._kind = SyntaxKind.get_keyword_kind(self._value)
+        self._value = self._text[self._start:self._pos]
+        self._text_span = TextSpan(self._start, self._pos)
+
+    def _label_char(self):
+        self._next()
+
+        while self._get_current_char() != '\'' and self._get_current_char() != "\0":
+            self._next()
+
+        if self._get_current_char() == "\0":
+            self._report_error(DiagnosticBag.Message.char_literal_not_closed)
+
+        if self._start - self._pos == 0:
+            self._report_error(DiagnosticBag.Message.char_empty)
+
+        if self._start - self._pos > 1:
+            self._report_error(DiagnosticBag.Message.char_invalid_size)
+
+        self._kind = SyntaxKind.char_token
+        self._value = self._text[self._start + 1: self._next()]
+        self._text_span = TextSpan(self._start + 1, self._pos - 1)
+
+    def _label_string(self):
+        self._next()
+
+        while self._get_current_char() != '"' and self._get_current_char() != "\0":
+            self._next()
+
+        if self._get_current_char() == "\0":
+            self._report_error(DiagnosticBag.Message.char_literal_not_closed)
+
+        self._kind = SyntaxKind.string_token
+        self._value = self._text[self._start + 1: self._pos - 1]
+        self._text_span = TextSpan(self._start + 1, self._next())
+
+    def _label_whitespace(self):
+        while self._get_current_char() == ' ':
+            self._next()
+
+        self._kind = SyntaxKind.white_space_token
+        self._value = self._text[self._start: self._pos]
+        self._text_span = TextSpan(self._start, self._pos)
+
+    def _label_double_token(self, char_2_list, kind_2_list, kind_1=None):
+        if len(char_2_list) == len(kind_2_list):
+            for i in range(len(char_2_list)):
+                if self._peek(1) == char_2_list[i]:
+                    self._kind = kind_2_list[i]
+                    self._value = self._text[self._start: self._pos + 1]
+                    self._text_span = TextSpan(self._start, self._next(2) + 1)
+
+                else:
+                    if kind_1 is not None:
+                        self._kind = kind_1
+                        self._value = self._get_current_char()
+                        self._text_span = TextSpan(self._start, self._next())
+
+                    else:
+                        self._next()
+                        self._start += 1
+                        self._report_error(DiagnosticBag.Message.char_not_expected, [self._get_current_char(), char_2_list[i]])
+
+        else:
+            raise Exception("Invalid combination of arguments")
+
+    def _report_error(self, error_message, optional_arguments_list=None):
+        if optional_arguments_list is not None:
+            self._diagnostics.append(
+                Diagnostic(TextSpan(self._start, self._pos, line=self._text), DiagnosticBag.Prefix.Error, error_message,
+                           optional_arguments_list))
+        else:
+            self._diagnostics.append(
+                Diagnostic(TextSpan(self._start, self._pos, line=self._text), DiagnosticBag.Prefix.Error,
+                           error_message))
 
     def label(self, include_whitespace=True):
         self._pos = 0
@@ -190,7 +231,8 @@ class Lexer(SyntaxKind):
             if not include_whitespace and current.get_kind() == SyntaxKind.white_space_token:
                 current = self._next_token
             token_list.append(current)
-        token_list.append(SyntaxToken(SyntaxKind.end_of_file_token, '\0', TextSpan(self._pos, self._pos)))
+        token_list.append(
+            SyntaxToken(SyntaxKind.end_of_file_token, '\0', TextSpan(self._pos, self._pos, line=self._text)))
         return token_list
 
     def get_diagnostics(self):
