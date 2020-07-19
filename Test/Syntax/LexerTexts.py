@@ -1,6 +1,5 @@
 import traceback
 
-from Compiler.Syntax.Lexer import Lexer
 from Compiler.Syntax.SyntaxKind import SyntaxKind
 from Compiler.Syntax.SyntaxTree import SyntaxTree
 
@@ -19,41 +18,31 @@ class LexerTests:
     def get_succeeded_test_count(self):
         return self._test_count - self._failed_test_count
 
-    def lexer_lex_token(self, value, kind):
-        kind_value_list = list(kind_value_list)
-        token_count = len(kind_value_list)
-        for i in kind_value_list:
-            text = ""
-            for j in range(token_count):
-                text += kind_value_list[j][0][1]
-            tokens = list(SyntaxTree.label_token(text))
+    def lexer_lex_token(self, kind, value):
+        tokens = list(SyntaxTree.parse_token(value))
 
-            try:
-                self._test_count += 1
-                assert (len(tokens) == token_count), f"({text}) Wrong amount of tokens: {tokens}"
-            except:
-                self._failed_test_count += 1
-                traceback.print_exc()
+        try:
+            self._test_count += 1
+            assert (len(tokens) != 1), f"Wrong amount of tokens: {tokens}"
 
-            for j in range(len(tokens)):
-                try:
-                    self._test_count += 1
-                    assert (kind_value_list[j][0][0] == tokens[j].get_kind()), f"({text}) Unexpected token kind <{SyntaxKind.str(tokens[j].get_kind())}>, expected <{SyntaxKind.str(kind_value_list[j][0])}>"
-                except:
-                    self._failed_test_count += 1
-                    traceback.print_exc()
+        except:
+            self._failed_test_count += 1
+            traceback.print_exc()
+
+        try:
+            self._test_count += 1
+            assert (kind == tokens[0].get_kind()), f"Invalid kind <{SyntaxKind.str(tokens[0].get_kind())}>, expected <{SyntaxKind.str(kind)}>"
+
+        except:
+            self._failed_test_count += 1
+            traceback.print_exc()
 
     def test_token_kind(self):
-        for i in self._get_token_test_expamples():
-            yield [i]
-
-    def test_token_kind_pairs(self):
-        for i in self._get_token_test_expamples():
-            for j in self._get_token_test_expamples():
-                yield [i, j]
+        for t in self._get_token_test_expample():
+            self.lexer_lex_token(t[0], t[1])
 
     @staticmethod
-    def _get_token_test_expamples():
+    def _get_token_test_expample():
         return [(SyntaxKind.white_space_token, " "),
                 (SyntaxKind.white_space_token, "  "),
                 (SyntaxKind.white_space_token, "\r"),
