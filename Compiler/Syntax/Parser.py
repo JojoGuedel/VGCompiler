@@ -10,6 +10,7 @@ from Compiler.Syntax.SyntaxToken import SyntaxToken
 from Compiler.Syntax.SyntaxTree import SyntaxTree
 from Compiler.Syntax.Lexer import Lexer
 from Compiler.Syntax.VariableExpressionSyntax import VariableExpressionSyntax
+from Compiler.TetxtSpan import TextSpan
 
 
 class Parser(SyntaxKind):
@@ -28,18 +29,26 @@ class Parser(SyntaxKind):
     def _peek(self, offset):
         if self._pos + offset >= len(self._tokens):
             return self._tokens[len(self._tokens) - 1]
+
         return self._tokens[self._pos + offset]
 
     def _match_token(self, list_kind):
         error_text = ""
+
         if len(list_kind) == 0:
             return self._get_current_token()
+
         for i in list_kind:
             error_text += SyntaxKind.str(i) + "/"
+
             if self._get_current_token().get_kind() == i:
                 return self._get_current_token()
-        self._diagnostics.append(Diagnostic(self._get_current_token().get_pos(), DiagnosticBag.Prefix.Error, DiagnosticBag.Message.token_unexpected_kind, [SyntaxKind.str(self._get_current_token().get_kind()), error_text[0:-1]]))
-        return SyntaxToken(list_kind[0], 0, self._get_current_token().get_pos())
+
+        self._report_error(self._get_current_token().get_text_span(),
+                           DiagnosticBag.Message.token_unexpected_kind,
+                           [SyntaxKind.str(self._get_current_token().get_kind()), error_text[0:-1]])
+
+        return SyntaxToken(list_kind[0], 0, self._get_current_token().get_text_span())
 
     def _next_token(self):
         current = self._get_current_token()
@@ -53,7 +62,6 @@ class Parser(SyntaxKind):
         lexer = Lexer(self._text)
         self._pos = 0
         self._tokens = lexer.label(include_whitespace=False)
-        print(self._tokens)
         self._diagnostics = lexer.get_diagnostics()
 
         syntax_expression = SyntaxTree(self._parse_expression(), self._diagnostics)
@@ -62,10 +70,12 @@ class Parser(SyntaxKind):
 
     def _parse_expression(self, parent_precedence=0):
         unary_operator_precedence = SyntaxKind.get_unary_operator_precedence(self._get_current_token().get_kind())
+
         if unary_operator_precedence != 0 and unary_operator_precedence >= parent_precedence:
             operator_token = self._next_token()
             operand = self._parse_expression(unary_operator_precedence)
             left = UnaryExpressionSyntax(operator_token, operand)
+
         else:
             left = self._parse_primary()
 
@@ -82,32 +92,61 @@ class Parser(SyntaxKind):
         return left
 
     def _parse_primary(self):
-        # parse parenthesis
         if self._get_current_token().get_kind() == SyntaxKind.open_parenthesis_token:
-            left_parenthesis = self._next_token()
-            expression = self._parse_expression()
-            right_parenthesis = self._match_token([SyntaxKind.close_parenthesis_token])
-            self._next_token()
-            return ParenthesizedExpressionSyntax(left_parenthesis, expression, right_parenthesis)
-        # boolean
+            return self._parse_parenthesized_expression()
+
         elif self._get_current_token().get_kind() == SyntaxKind.true_keyword or \
                 self._get_current_token().get_kind() == SyntaxKind.false_keyword:
-            value = self._get_current_token().get_kind() == SyntaxKind.true_keyword
-            self._get_current_token()._value = value
-            return LiteralExpressionSyntax(self._next_token())
-        elif self._get_current_token().get_kind() == SyntaxKind.identifier_token:
-            identifier = self._get_current_token()
-            self._next_token()
-            if self._get_current_token().get_kind() == SyntaxKind.equals_token:
-                equals_token = self._get_current_token()
-                self._next_token()
-                value = self._parse_expression()
-                return AssignmentExpressionSyntax(identifier, equals_token, value)
-            else:
-                return VariableExpressionSyntax(identifier)
+            return self._parse_boolean_literal_expression()
 
-        # parse numbers
-        literal_token = self._match_token(
-            [SyntaxKind.int_token, SyntaxKind.float_token, SyntaxKind.string_token, SyntaxKind.char_token])
-        self._pos += 1
-        return LiteralExpressionSyntax(literal_token)
+        elif self._get_current_token().get_kind() == SyntaxKind.identifier_token:
+            return self._parse_variable_expression()
+
+        else:
+            literal_token = self._match_token([SyntaxKind.int_token,
+                                               SyntaxKind.float_token,
+                                               SyntaxKind.string_token,
+                                               SyntaxKind.char_token])
+            self._pos += 1
+            return LiteralExpressionSyntax(literal_token)
+
+    def _parse_parenthesized_expression(self):
+        left_parenthesis = self._match_token([SyntaxKind.open_parenthesis_token])
+        self._next_token()
+
+        expression = self._parse_expression()
+        right_parenthesis = self._match_token([SyntaxKind.close_parenthesis_token])
+        self._next_token()
+
+        return ParenthesizedExpressionSyntax(left_parenthesis, expression, right_parenthesis)
+
+    def _parse_boolean_literal_expression(self):
+        value = self._get_current_token().get_kind() == SyntaxKind.true_keyword
+        self._get_current_token()._value = value
+
+        return LiteralExpressionSyntax(self._next_token())
+
+    def _parse_variable_expression(self):
+        identifier = self._match_token([SyntaxKind.identifier_token])
+        self._next_token()
+
+        if self._get_current_token().get_kind() == SyntaxKind.equals_token:
+            equals_token = self._next_token()
+            value = self._parse_expression()
+            return AssignmentExpressionSyntax(identifier, equals_token, value)
+
+        else:
+            return VariableExpressionSyntax(identifier)
+
+    def _report_error(self, text_span: TextSpan, error_message, optional_arguments_list=None):
+        if optional_arguments_list is not None:
+            self._diagnostics.append(
+                Diagnostic(text_span,
+                           DiagnosticBag.Prefix.Error,
+                           error_message,
+                           optional_arguments_list))
+        else:
+            self._diagnostics.append(
+                Diagnostic(text_span,
+                           DiagnosticBag.Prefix.Error,
+                           error_message))

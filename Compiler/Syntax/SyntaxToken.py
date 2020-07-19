@@ -20,7 +20,7 @@ class SyntaxToken:
     def get_value(self):
         return self._value
 
-    def get_pos(self):
+    def get_text_span(self):
         return self._text_span
 
     @staticmethod

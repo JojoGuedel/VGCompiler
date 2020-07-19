@@ -63,7 +63,7 @@ class Binder:
         bound_operator_kind: BoundKind = self._bind_unary_operator_kind(syntax.get_operator_token().get_kind())
         result_type = BoundKind.resolve_unary_type(bound_operand.get_type(), bound_operator_kind)
         if result_type is None:
-            self._diagnostics.append(Diagnostic(syntax.get_operator_token().get_pos(), DiagnosticBag.Prefix.Error,
+            self._diagnostics.append(Diagnostic(syntax.get_operator_token().get_text_span(), DiagnosticBag.Prefix.Error,
                                                 DiagnosticBag.Message.operation_illegal_unary,
                                                 [BoundKind.str(bound_operator_kind), Type.str(bound_operand.get_type())]))
         return BoundUnaryExpression(bound_operator_kind, bound_operand, result_type)
@@ -74,7 +74,7 @@ class Binder:
         bound_operator_kind = self._bind_binary_operator_kind(syntax.get_operator_token().get_kind())
         result_type = BoundKind.resolve_binary_type(bound_left.get_type(), bound_operator_kind, bound_right.get_type())
         if result_type is None:
-            self._diagnostics.append(Diagnostic(syntax.get_operator_token().get_pos(), DiagnosticBag.Prefix.Error,
+            self._diagnostics.append(Diagnostic(syntax.get_operator_token().get_text_span(), DiagnosticBag.Prefix.Error,
                                                 DiagnosticBag.Message.operation_illegal_binary,
                                                 [BoundKind.str(bound_operator_kind), Type.str(bound_left.get_type()),
                                                 Type.str(bound_right.get_type())]))
@@ -85,7 +85,7 @@ class Binder:
 
         if not name in self._variables:
             self._diagnostics.append(
-                Diagnostic(syntax.get_identifier_token().get_pos(), DiagnosticBag.Prefix.Error, DiagnosticBag.Message.variable_not_defined, name))
+                Diagnostic(syntax.get_identifier_token().get_text_span(), DiagnosticBag.Prefix.Error, DiagnosticBag.Message.variable_not_defined, name))
             return BoundLiteralExpression(Type.none_type, 0)
 
         variable_type = Type.none_type
