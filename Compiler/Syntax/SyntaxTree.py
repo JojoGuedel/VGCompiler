@@ -17,7 +17,7 @@ class SyntaxTree:
         return self._diagnostics
 
     @staticmethod
-    def parse_token(value):
+    def label_token(value):
         lexer = Lexer()
         lexer.set_text(value)
 

@@ -12,7 +12,7 @@ succeeded_test_count = 0
 lexer_tests = LexerTests()
 
 start_time = time.time()
-lexer_tests.test_token_kind()
+lexer_tests.lexer_lex_token(lexer_tests.test_token_kind())
 end_time = time.time()
 
 test_count += lexer_tests.get_test_count()
@@ -23,4 +23,4 @@ time.sleep(0.1)
 print(f"\nTested: {test_count}, "
       f"{colorama.Fore.GREEN}Succeeded: {colorama.Fore.RESET}{succeeded_test_count}, "
       f"{colorama.Fore.RED}Failed: {colorama.Fore.RESET}{failed_test_count}\n"
-      f"Time Elapsed: %s sec" % (time.time() - start_time))
+      f"Time Elapsed: %s sec" % (end_time - start_time))
