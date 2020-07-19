@@ -14,6 +14,7 @@ from Compiler.Syntax.LiteralExpressionSyntax import LiteralExpressionSyntax
 from Compiler.Binding.BoundVariableExpression import BoundVariableExpression
 from Compiler.Syntax.VariableExpressionSyntax import VariableExpressionSyntax
 from Compiler.Binding.BoundAssignmentExpression import BoundAssignmentExpression
+from Compiler.Syntax.AdditionalAssignmentExpression import AdditionalAssignmentExpression
 
 
 class Binder:
@@ -50,6 +51,8 @@ class Binder:
             return self._bind_variable_expression(syntax)
         elif syntax.get_kind() == SyntaxKind.assignment_expression:
             return self._bind_assignment_expression(syntax)
+        elif syntax.get_kind() == SyntaxKind.additional_assignment_expression:
+            return self._bind_additional_assignment_expression(syntax)
         else:
             raise Exception(f"Unexpected syntax: '{SyntaxKind.str(self._syntax.get_kind())}'")
 
@@ -65,7 +68,8 @@ class Binder:
         if result_type is None:
             self._diagnostics.append(Diagnostic(syntax.get_operator_token().get_text_span(), DiagnosticBag.Prefix.Error,
                                                 DiagnosticBag.Message.operation_illegal_unary,
-                                                [BoundKind.str(bound_operator_kind), Type.str(bound_operand.get_type())]))
+                                                [BoundKind.str(bound_operator_kind),
+                                                 Type.str(bound_operand.get_type())]))
         return BoundUnaryExpression(bound_operator_kind, bound_operand, result_type)
 
     def _bind_binary_expression(self, syntax: BinaryExpressionSyntax):
@@ -77,36 +81,28 @@ class Binder:
             self._diagnostics.append(Diagnostic(syntax.get_operator_token().get_text_span(), DiagnosticBag.Prefix.Error,
                                                 DiagnosticBag.Message.operation_illegal_binary,
                                                 [BoundKind.str(bound_operator_kind), Type.str(bound_left.get_type()),
-                                                Type.str(bound_right.get_type())]))
+                                                 Type.str(bound_right.get_type())]))
         return BoundBinaryExpression(bound_left, bound_operator_kind, bound_right, result_type)
 
     def _bind_variable_expression(self, syntax: VariableExpressionSyntax):
-        name = syntax.get_identifier_token().get_value()
+        identifier_token = syntax.get_identifier_token()
 
-        if not name in self._variables:
-            self._diagnostics.append(
-                Diagnostic(syntax.get_identifier_token().get_text_span(), DiagnosticBag.Prefix.Error, DiagnosticBag.Message.variable_not_defined, name))
-            return BoundLiteralExpression(Type.none_type, 0)
-
-        variable_type = Type.none_type
-        if isinstance(self._variables[name], int):
-            variable_type = Type.int_type
-        if isinstance(self._variables[name], float):
-            variable_type = Type.float_type
-        if isinstance(self._variables[name], str):
-            variable_type = Type.string_type
-            if len(self._variables[name]) == 1:
-                variable_type = Type.char_type
-        if isinstance(self._variables[name], bool):
-            variable_type = Type.boolean_type
-        if self._variables[name] is None:
-            variable_type = Type.any_type
-        return BoundVariableExpression(name, variable_type)
+        variable_type = self._get_variable_type(identifier_token)
+        return BoundVariableExpression(identifier_token.get_value(), variable_type)
 
     def _bind_assignment_expression(self, syntax: AssignmentExpressionSyntax):
         variable_name = syntax.get_identifier_token().get_value()
         expression = self._bind_expression(syntax.get_expression())
         return BoundAssignmentExpression(variable_name, expression)
+
+    def _bind_additional_assignment_expression(self, syntax: AdditionalAssignmentExpression):
+        identifier_token = syntax.get_identifier_token()
+        expression = BoundBinaryExpression(BoundVariableExpression(identifier_token.get_value(),
+                                                                   self._get_variable_type(identifier_token)),
+                                           self._bind_binary_operator_kind(syntax.get_assignment_token().get_kind()),
+                                           self._bind_expression(syntax.get_expression()),
+                                           self._get_variable_type(identifier_token))
+        return BoundAssignmentExpression(identifier_token.get_value(), expression)
 
     @staticmethod
     def _bind_unary_operator_kind(kind):
@@ -123,29 +119,78 @@ class Binder:
     def _bind_binary_operator_kind(kind):
         if kind == SyntaxKind.plus_token:
             return BoundKind.addition
+
         elif kind == SyntaxKind.minus_token:
             return BoundKind.subtraction
+
         elif kind == SyntaxKind.star_token:
             return BoundKind.multiplication
+
         elif kind == SyntaxKind.slash_token:
             return BoundKind.division
+
         elif kind == SyntaxKind.double_star_token:
             return BoundKind.power
+
         elif kind == SyntaxKind.double_slash_token:
             return BoundKind.root
+
         elif kind == SyntaxKind.double_ampersand_token:
             return BoundKind.logical_and
+
         elif kind == SyntaxKind.double_pipe_token:
             return BoundKind.logical_or
+
         elif kind == SyntaxKind.double_equals_token:
             return BoundKind.double_equals
+
         elif kind == SyntaxKind.less_or_equals_token:
             return BoundKind.less_or_equals
+
         elif kind == SyntaxKind.greater_or_equals_token:
             return BoundKind.greater_or_equals
+
         elif kind == SyntaxKind.less_than_token:
             return BoundKind.less_than
+
         elif kind == SyntaxKind.greater_than_token:
             return BoundKind.greater_than
+
+        elif kind == SyntaxKind.plus_equals_token:
+            return BoundKind.addition
+
+        elif kind == SyntaxKind.minus_equals_token:
+            return BoundKind.subtraction
+
+        elif kind == SyntaxKind.star_equals_token:
+            return BoundKind.multiplication
+
+        elif kind == SyntaxKind.slash_equals_token:
+            return BoundKind.division
+
         else:
             raise Exception(f"Unexpected binary operator: '{SyntaxKind.str(kind)}'")
+
+    def _get_variable_type(self, variable_token):
+        name = variable_token.get_value()
+
+        if not name in self._variables:
+            self._diagnostics.append(
+                Diagnostic(variable_token.get_text_span(), DiagnosticBag.Prefix.Error,
+                           DiagnosticBag.Message.variable_not_defined, name))
+            return BoundLiteralExpression(Type.none_type, 0)
+
+        variable_type = Type.none_type
+        if isinstance(self._variables[name], int):
+            variable_type = Type.int_type
+        elif isinstance(self._variables[name], float):
+            variable_type = Type.float_type
+        elif isinstance(self._variables[name], str):
+            variable_type = Type.string_type
+            if len(self._variables[name]) == 1:
+                variable_type = Type.char_type
+        elif isinstance(self._variables[name], bool):
+            variable_type = Type.boolean_type
+        elif self._variables[name] is None:
+            variable_type = Type.any_type
+        return variable_type

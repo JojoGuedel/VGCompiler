@@ -1,5 +1,6 @@
 import colorama
 
+from Compiler.Syntax.Lexer import Lexer
 from Compiler.Syntax.SyntaxKind import SyntaxKind
 from Compiler.Syntax.SyntaxToken import SyntaxToken
 
@@ -14,6 +15,13 @@ class SyntaxTree:
 
     def get_diagnostics(self):
         return self._diagnostics
+
+    @staticmethod
+    def parse_token(value):
+        lexer = Lexer()
+        lexer.set_text(value)
+
+        return lexer.label()
 
     def print(self):
         print(colorama.Fore.WHITE, end='')

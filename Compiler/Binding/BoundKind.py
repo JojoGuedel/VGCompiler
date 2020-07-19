@@ -173,6 +173,8 @@ class BoundKind:
             return "less_than"
         elif kind == cls.greater_than:
             return "greater_than"
+        else:
+            return "bound operator not found"
 
     @classmethod
     def resolve_unary_type(cls, syntax_kind, bound_operator_kind):

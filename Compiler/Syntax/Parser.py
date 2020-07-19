@@ -1,5 +1,6 @@
 from Compiler.Diagnostic import Diagnostic
 from Compiler.DiagnosticBag import DiagnosticBag
+from Compiler.Syntax.AdditionalAssignmentExpression import AdditionalAssignmentExpression
 from Compiler.Syntax.AssignmentExpression import AssignmentExpressionSyntax
 from Compiler.Syntax.UnaryExpressionSyntax import UnaryExpressionSyntax
 from Compiler.Syntax.BinaryExpressionSyntax import BinaryExpressionSyntax
@@ -134,6 +135,14 @@ class Parser(SyntaxKind):
             equals_token = self._next_token()
             value = self._parse_expression()
             return AssignmentExpressionSyntax(identifier, equals_token, value)
+
+        elif self._get_current_token().get_kind() == SyntaxKind.plus_equals_token or \
+                self._get_current_token().get_kind() == SyntaxKind.minus_equals_token or \
+                self._get_current_token().get_kind() == SyntaxKind.star_equals_token or \
+                self._get_current_token().get_kind() == SyntaxKind.slash_equals_token:
+            assignment_token = self._next_token()
+            value = self._parse_expression()
+            return AdditionalAssignmentExpression(identifier, assignment_token, value)
 
         else:
             return VariableExpressionSyntax(identifier)

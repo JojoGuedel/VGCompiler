@@ -13,6 +13,9 @@ class Compilation:
 
     def evaluate(self, variables):
         binder = Binder()
+
+
+
         binder.set_syntax_tree(self._syntax_tree)
         binder.set_variable(variables)
         self._syntax_tree.print()

@@ -26,6 +26,10 @@ class SyntaxKind:
     less_than_token = 124
     greater_than_token = 125
     equals_token = 126
+    plus_equals_token = 127
+    minus_equals_token = 128
+    star_equals_token = 129
+    slash_equals_token = 130
 
     literal_expression = 200
     unary_expression = 201
@@ -33,6 +37,7 @@ class SyntaxKind:
     parenthesized_expression = 203
     variable_expression = 204
     assignment_expression = 205
+    additional_assignment_expression = 206
 
     true_keyword = 300
     false_keyword = 301
@@ -91,6 +96,14 @@ class SyntaxKind:
             return "greater_than"
         elif kind == cls.equals_token:
             return "equals_token"
+        elif kind == cls.plus_equals_token:
+            return "plus_equals_token"
+        elif kind == cls.minus_equals_token:
+            return "minus_equals_token"
+        elif kind == cls.star_equals_token:
+            return "star_equals_token"
+        elif kind == cls.slash_equals_token:
+            return "slash_equals_token"
 
         elif kind == cls.literal_expression:
             return "literal_expression"

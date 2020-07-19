@@ -30,16 +30,16 @@ class Lexer(SyntaxKind):
         token_list = []
 
         while self._get_current_char() != '\0':
-            current = self._next_token
+            current = self._lex
             if not include_whitespace and current.get_kind() == SyntaxKind.white_space_token:
-                current = self._next_token
+                current = self._lex
             token_list.append(current)
         token_list.append(
             SyntaxToken(SyntaxKind.end_of_file_token, '\0', TextSpan(self._pos, self._pos, line=self._text)))
         return token_list
 
     @property
-    def _next_token(self):
+    def _lex(self):
         self._start = self._pos
         self._value = None
         self._kind = SyntaxKind.invalid_char_token
@@ -57,19 +57,29 @@ class Lexer(SyntaxKind):
         elif self._get_current_char() == '"':
             self._label_string()
 
-        elif self._get_current_char() == ' ' or\
-                self._get_current_char() == '\t' or\
-                self._get_current_char() == '\n' or\
+        elif self._get_current_char() == ' ' or \
+                self._get_current_char() == '\t' or \
+                self._get_current_char() == '\n' or \
                 self._get_current_char() == '\r':
             self._label_whitespace()
 
+        elif self._get_current_char() == '+':
+            self._label_double_token(['='], [SyntaxKind.plus_equals_token], SyntaxKind.plus_token)
+
+        elif self._get_current_char() == '-':
+            self._label_double_token(['='], [SyntaxKind.minus_equals_token], SyntaxKind.minus_token)
+
         elif self._get_current_char() == '*':
-            self._label_double_token(['*', '='], [SyntaxKind.double_star_token,
-                                                  SyntaxKind.equals_token],
+            self._label_double_token(['*', '='],
+                                     [SyntaxKind.double_star_token,
+                                      SyntaxKind.star_equals_token],
                                      SyntaxKind.star_token)
 
         elif self._get_current_char() == '/':
-            self._label_double_token(['/'], [SyntaxKind.double_slash_token], SyntaxKind.slash_token)
+            self._label_double_token(['/', '='],
+                                     [SyntaxKind.double_slash_token,
+                                      SyntaxKind.slash_equals_token],
+                                     SyntaxKind.slash_token)
 
         elif self._get_current_char() == '!':
             self._label_double_token(['='], [SyntaxKind.not_equals_token], SyntaxKind.bang_token)
@@ -78,7 +88,7 @@ class Lexer(SyntaxKind):
             self._label_double_token(['='], [SyntaxKind.double_equals_token], SyntaxKind.equals_token)
 
         elif self._get_current_char() == '<':
-            self._label_double_token(['='], [SyntaxKind.less_than_token], SyntaxKind.less_or_equals_token)
+            self._label_double_token(['='], [SyntaxKind.less_or_equals_token], SyntaxKind.less_than_token)
 
         elif self._get_current_char() == '>':
             self._label_double_token(['='], [SyntaxKind.greater_or_equals_token], SyntaxKind.greater_than_token)
@@ -88,16 +98,6 @@ class Lexer(SyntaxKind):
 
         elif self._get_current_char() == '|':
             self._label_double_token(['|'], [SyntaxKind.double_pipe_token])
-
-        elif self._get_current_char() == '+':
-            self._kind = SyntaxKind.plus_token
-            self._value = '+'
-            self._text_span = TextSpan(self._start, self._next())
-
-        elif self._get_current_char() == '-':
-            self._kind = SyntaxKind.minus_token
-            self._value = '-'
-            self._text_span = TextSpan(self._start, self._next())
 
         elif self._get_current_char() == '(':
             self._kind = SyntaxKind.open_parenthesis_token
@@ -189,9 +189,9 @@ class Lexer(SyntaxKind):
         self._text_span = TextSpan(self._start + 1, self._next())
 
     def _label_whitespace(self):
-        while self._get_current_char() == ' ' or\
-                self._get_current_char() == '\t' or\
-                self._get_current_char() == '\n' or\
+        while self._get_current_char() == ' ' or \
+                self._get_current_char() == '\t' or \
+                self._get_current_char() == '\n' or \
                 self._get_current_char() == '\r':
             self._next()
 
@@ -206,19 +206,19 @@ class Lexer(SyntaxKind):
                     self._kind = kind_2_list[i]
                     self._value = self._text[self._start: self._pos + 1]
                     self._text_span = TextSpan(self._start, self._next(2) + 1)
+                    break
 
-                else:
-                    if kind_1 is not None:
-                        self._kind = kind_1
-                        self._value = self._get_current_char()
-                        self._text_span = TextSpan(self._start, self._next())
+                if kind_1 is not None and i == len(char_2_list) - 1:
+                    self._kind = kind_1
+                    self._value = self._get_current_char()
+                    self._text_span = TextSpan(self._start, self._next())
 
-                    else:
-                        self._next()
-                        self._start += 1
-                        self._report_error(DiagnosticBag.Message.char_not_expected,
-                                           [self._get_current_char(),
-                                            char_2_list[i]])
+                elif i == len(char_2_list) - 1:
+                    self._next()
+                    self._start += 1
+                    self._report_error(DiagnosticBag.Message.char_not_expected,
+                                       [self._get_current_char(),
+                                        char_2_list[i]])
 
         else:
             raise Exception("Invalid combination of arguments")
