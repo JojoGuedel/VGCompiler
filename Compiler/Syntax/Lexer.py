@@ -23,30 +23,6 @@ class Lexer(SyntaxKind):
     def get_diagnostics(self):
         return self._diagnostics
 
-    def _next(self, offset=1):
-        self._pos += offset
-        return self._pos - offset
-
-    def _get_current_char(self):
-        return self._peek(0)
-
-    def _peek(self, offset):
-        if self._pos + offset >= len(self._text):
-            return '\0'
-        return self._text[self._pos + offset]
-
-    @staticmethod
-    def _is_number(text):
-        if text in "1234567890":
-            return True
-        return False
-
-    @staticmethod
-    def _is_letter(text):
-        if text in "abcdefghijklmnopqrstuvxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_":
-            return True
-        return False
-
     def label(self, include_whitespace=True):
         self._pos = 0
         self._diagnostics.clear()
@@ -81,11 +57,16 @@ class Lexer(SyntaxKind):
         elif self._get_current_char() == '"':
             self._label_string()
 
-        elif self._get_current_char() == ' ':
+        elif self._get_current_char() == ' ' or\
+                self._get_current_char() == '\t' or\
+                self._get_current_char() == '\n' or\
+                self._get_current_char() == '\r':
             self._label_whitespace()
 
         elif self._get_current_char() == '*':
-            self._label_double_token(['*', '='], [SyntaxKind.double_star_token, SyntaxKind.equals_token], SyntaxKind.star_token)
+            self._label_double_token(['*', '='], [SyntaxKind.double_star_token,
+                                                  SyntaxKind.equals_token],
+                                     SyntaxKind.star_token)
 
         elif self._get_current_char() == '/':
             self._label_double_token(['/'], [SyntaxKind.double_slash_token], SyntaxKind.slash_token)
@@ -136,7 +117,11 @@ class Lexer(SyntaxKind):
         else:
             self._next()
 
-        return SyntaxToken(self._kind, self._value, TextSpan(self._text_span.get_start(), self._text_span.get_end(), self._text))
+        return SyntaxToken(self._kind,
+                           self._value,
+                           TextSpan(self._text_span.get_start(),
+                                    self._text_span.get_end(),
+                                    self._text))
 
     def _label_number(self):
         value = 0.0
@@ -204,7 +189,10 @@ class Lexer(SyntaxKind):
         self._text_span = TextSpan(self._start + 1, self._next())
 
     def _label_whitespace(self):
-        while self._get_current_char() == ' ':
+        while self._get_current_char() == ' ' or\
+                self._get_current_char() == '\t' or\
+                self._get_current_char() == '\n' or\
+                self._get_current_char() == '\r':
             self._next()
 
         self._kind = SyntaxKind.white_space_token
@@ -228,7 +216,9 @@ class Lexer(SyntaxKind):
                     else:
                         self._next()
                         self._start += 1
-                        self._report_error(DiagnosticBag.Message.char_not_expected, [self._get_current_char(), char_2_list[i]])
+                        self._report_error(DiagnosticBag.Message.char_not_expected,
+                                           [self._get_current_char(),
+                                            char_2_list[i]])
 
         else:
             raise Exception("Invalid combination of arguments")
@@ -236,9 +226,40 @@ class Lexer(SyntaxKind):
     def _report_error(self, error_message, optional_arguments_list=None):
         if optional_arguments_list is not None:
             self._diagnostics.append(
-                Diagnostic(TextSpan(self._start, self._pos, line=self._text), DiagnosticBag.Prefix.Error, error_message,
+                Diagnostic(TextSpan(self._start,
+                                    self._pos,
+                                    line=self._text),
+                           DiagnosticBag.Prefix.Error,
+                           error_message,
                            optional_arguments_list))
         else:
             self._diagnostics.append(
-                Diagnostic(TextSpan(self._start, self._pos, line=self._text), DiagnosticBag.Prefix.Error,
+                Diagnostic(TextSpan(self._start,
+                                    self._pos,
+                                    line=self._text),
+                           DiagnosticBag.Prefix.Error,
                            error_message))
+
+    def _next(self, offset=1):
+        self._pos += offset
+        return self._pos - offset
+
+    def _get_current_char(self):
+        return self._peek(0)
+
+    def _peek(self, offset):
+        if self._pos + offset >= len(self._text):
+            return '\0'
+        return self._text[self._pos + offset]
+
+    @staticmethod
+    def _is_number(text):
+        if text in "1234567890":
+            return True
+        return False
+
+    @staticmethod
+    def _is_letter(text):
+        if text in "abcdefghijklmnopqrstuvxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_":
+            return True
+        return False
