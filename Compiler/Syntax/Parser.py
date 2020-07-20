@@ -40,14 +40,14 @@ class Parser(SyntaxKind):
             return self._get_current_token()
 
         for i in list_kind:
-            error_text += SyntaxKind.str(i) + "/"
+            error_text += SyntaxKind.kind_exists(i) + "/"
 
             if self._get_current_token().get_kind() == i:
                 return self._get_current_token()
 
         self._report_error(self._get_current_token().get_text_span(),
                            DiagnosticBag.Message.token_unexpected_kind,
-                           [SyntaxKind.str(self._get_current_token().get_kind()), error_text[0:-1]])
+                           [SyntaxKind.kind_exists(self._get_current_token().get_kind()), error_text[0:-1]])
 
         return SyntaxToken(list_kind[0], 0, self._get_current_token().get_text_span())
 

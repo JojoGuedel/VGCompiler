@@ -12,7 +12,7 @@ class SyntaxToken:
         return str(self)
 
     def __str__(self):
-        return f"{SyntaxKind.str(self._kind)}: '{self._value}' at {self._text_span.get_start()}"
+        return f"{SyntaxKind.kind_exists(self._kind)}: '{self._value}' at {self._text_span.get_start()}"
 
     def get_kind(self):
         return self._kind

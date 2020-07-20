@@ -36,7 +36,7 @@ class SyntaxTree:
 
         print(indent, end='')
         print(maker, end='')
-        print(SyntaxKind.str(node.get_kind()), end='')
+        print(SyntaxKind.kind_exists(node.get_kind()), end='')
 
         if isinstance(node, SyntaxToken) and node.get_value() is not None:
             print(f": {node.get_value()}")

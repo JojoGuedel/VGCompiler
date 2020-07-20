@@ -31,7 +31,7 @@ class LexerTests:
 
         try:
             self._test_count += 1
-            assert (kind == tokens[0].get_kind()), f"Invalid kind <{SyntaxKind.str(tokens[0].get_kind())}>, expected <{SyntaxKind.str(kind)}>"
+            assert (kind == tokens[0].get_kind()), f"Unexpected kind <{SyntaxKind.str(tokens[0].get_kind())}>, expected <{SyntaxKind.str(kind)}>"
 
         except:
             self._failed_test_count += 1

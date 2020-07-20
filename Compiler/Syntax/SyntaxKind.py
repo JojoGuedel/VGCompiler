@@ -42,89 +42,91 @@ class SyntaxKind:
     true_keyword = 300
     false_keyword = 301
 
+    str = {
+        invalid_char_token: "invalid_char_token",
+        end_of_file_token: "end_of_file_token",
+
+        int_token: "int_token",
+        float_token: "float_token",
+        char_token: "char_token",
+        string_token: "string_token",
+        plus_token: "plus_token",
+        minus_token: "minus_token",
+        star_token: "star_token",
+        slash_token: "slash_token",
+        double_star_token: "double_star_token",
+        double_slash_token: "double_slash_token",
+        open_parenthesis_token: "open_parenthesis_token",
+        close_parenthesis_token: "close_parenthesis_token",
+        white_space_token: "white_space_token",
+        identifier_token: "identifier_token",
+        bang_token: "bang_token",
+        double_ampersand_token: "double_ampersand_token",
+        double_pipe_token: "double_pipe_token",
+        double_equals_token: "double_equals_token",
+        not_equals_token: "not_equals_token",
+        less_or_equals_token: "less_or_equals_token",
+        greater_or_equals_token: "greater_or_equals_token",
+        less_than_token: "less_than_token",
+        greater_than_token: "greater_than_token",
+        equals_token: "equals_token",
+        plus_equals_token: "plus_equals_token",
+        minus_equals_token: "minus_equals_token",
+        star_equals_token: "star_equals_token",
+        slash_equals_token: "slash_equals_token",
+
+        literal_expression: "literal_expression",
+        unary_expression: "unary_expression",
+        binary_expression: "binary_expression",
+        parenthesized_expression: "parenthesized_expression",
+        variable_expression: "variable_expression",
+        assignment_expression: "assignment_expression",
+        additional_assignment_expression: "additional_assignment_expression",
+
+        true_keyword: "true_keyword",
+        false_keyword: "false_keyword",
+    }
+
+    value = {
+        plus_token: "+",
+        minus_token: "-",
+        star_token: "*",
+        slash_token: "/",
+        double_star_token: "**",
+        double_slash_token: "//",
+        open_parenthesis_token: "(",
+        close_parenthesis_token: ")",
+        bang_token: "!",
+        double_ampersand_token: "&&",
+        double_pipe_token: "||",
+        double_equals_token: "==",
+        not_equals_token: "!=",
+        less_or_equals_token: "<=",
+        greater_or_equals_token: ">=",
+        less_than_token: "<",
+        greater_than_token: ">",
+        equals_token: "=",
+        plus_equals_token: "+=",
+        minus_equals_token: "-=",
+        star_equals_token: "*=",
+        slash_equals_token: "/=",
+        true_keyword: "true",
+        false_keyword: "false",
+    }
+
     @classmethod
-    def str(cls, kind):
-        if kind == cls.invalid_char_token:
-            return "invalid_char_token"
-        elif kind == cls.end_of_file_token:
-            return "end_of_file_token"
-        elif kind == cls.int_token:
-            return "int_token"
-        elif kind == cls.float_token:
-            return "float_token"
-        elif kind == cls.char_token:
-            return "char_token"
-        elif kind == cls.string_token:
-            return "string_token"
-        elif kind == cls.plus_token:
-            return "plus_token"
-        elif kind == cls.minus_token:
-            return "minus_token"
-        elif kind == cls.star_token:
-            return "star_token"
-        elif kind == cls.slash_token:
-            return "slash_token"
-        elif kind == cls.double_star_token:
-            return "double_star_token"
-        elif kind == cls.double_slash_token:
-            return "double_slash_token"
-        elif kind == cls.open_parenthesis_token:
-            return "open_parenthesis_token"
-        elif kind == cls.close_parenthesis_token:
-            return "close_parenthesis_token"
-        elif kind == cls.white_space_token:
-            return "white_space_token"
-        elif kind == cls.identifier_token:
-            return "identifier_token"
-        elif kind == cls.bang_token:
-            return "bang_token"
-        elif kind == cls.double_ampersand_token:
-            return "double_ampersand_token"
-        elif kind == cls.double_pipe_token:
-            return "double_pipe_token"
-        elif kind == cls.double_equals_token:
-            return "double_equals_token"
-        elif kind == cls.not_equals_token:
-            return "not_equals_token"
-        elif kind == cls.less_or_equals_token:
-            return "less_or_equals_token"
-        elif kind == cls.greater_or_equals_token:
-            return "greater_or_equals_token"
-        elif kind == cls.less_than_token:
-            return "less_than"
-        elif kind == cls.greater_than_token:
-            return "greater_than"
-        elif kind == cls.equals_token:
-            return "equals_token"
-        elif kind == cls.plus_equals_token:
-            return "plus_equals_token"
-        elif kind == cls.minus_equals_token:
-            return "minus_equals_token"
-        elif kind == cls.star_equals_token:
-            return "star_equals_token"
-        elif kind == cls.slash_equals_token:
-            return "slash_equals_token"
-
-        elif kind == cls.literal_expression:
-            return "literal_expression"
-        elif kind == cls.unary_expression:
-            return "unary_expression"
-        elif kind == cls.binary_expression:
-            return "binary_expression"
-        elif kind == cls.parenthesized_expression:
-            return "parenthesized_expression"
-        elif kind == cls.variable_expression:
-            return "variable_expression"
-        elif kind == cls.assignment_expression:
-            return "assignment_expression"
-
-        elif kind == cls.true_keyword:
-            return "true_keyword"
-        elif kind == cls.false_keyword:
-            return "false_keyword"
-
+    def kind_exists(cls, kind):
+        if kind in cls.str:
+            return cls.str[kind]
         else:
-            return f"invalid_syntax_kind: {kind}"
+            return None
+
+    @classmethod
+    def value_exists(cls, kind):
+        if kind in cls.value:
+            return cls.value[kind]
+        else:
+            return None
 
     @classmethod
     def get_binary_operator_precedence(cls, kind):

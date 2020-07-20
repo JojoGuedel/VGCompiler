@@ -204,7 +204,7 @@ class Lexer(SyntaxKind):
             for i in range(len(char_2_list)):
                 if self._peek(1) == char_2_list[i]:
                     self._kind = kind_2_list[i]
-                    self._value = self._text[self._start: self._pos + 1]
+                    self._value = self._text[self._start: self._pos + 2]
                     self._text_span = TextSpan(self._start, self._next(2) + 1)
                     break
 
